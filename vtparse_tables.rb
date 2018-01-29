@@ -88,7 +88,7 @@ $states[:UTF8_4_1] = {
 }
 
 $states[:UTF8_4_2] = {
-    0x80..0x5f => [:print, transition_to(:GROUND)],
+    0x80..0xbf => [:print, transition_to(:GROUND)],
 }
 
 $states[:ESCAPE] = {
