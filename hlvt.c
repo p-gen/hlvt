@@ -935,12 +935,12 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
             {
               case 1:
                 /* from cursor left EL1 */
-                for (i          = 0; i < pos; i++)
+                for (i = 0; i < pos; i++)
                   cl->string[i] = ' ';
                 break;
               case 2:
                 /* from entire line EL2 */
-                for (i          = 0; i < cl->bytes; i++)
+                for (i = 0; i < cl->bytes; i++)
                   cl->string[i] = ' ';
                 cl->bytes = cl->length = 0;
                 cl->string[0]          = '\0';
@@ -962,12 +962,12 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
           screen.column = 0;
           break;
 
-        case 0x08: /* Carriage return */
+        case 0x08: /* Backspace */
           if (screen.column > 0)
             screen.column--;
           break;
 
-        case 0x09: /* Carriage return */
+        case 0x09: /* Tab */
           /* FIXME: for now assume a hard coded tab each 8 characters */
           /* """""""""""""""""""""""""""""""""""""""""""""""""""""""" */
           screen.column = (screen.column + 8) / 8 * 8;
