@@ -15,22 +15,20 @@
 #include <string.h>
 #include <unistd.h>
 
-typedef struct ll_node_s ll_node_t;
-typedef struct ll_s      ll_t;
-typedef struct screen_s  screen_t;
-typedef struct line_s    line_t;
+typedef struct ll_node_s     ll_node_t;
+typedef struct ll_s          ll_t;
+typedef struct screen_s      screen_t;
+typedef struct line_s        line_t;
+typedef struct attrs_bytes_s attrs_bytes_t;
 
 static void *
 xmalloc(size_t size);
 
-/* Not used here */
-#if 0
 static void *
 xcalloc(size_t num, size_t size);
 
 static void *
 xrealloc(void * ptr, size_t size);
-#endif
 
 char *
 xstrdup(const char * p);
@@ -81,6 +79,9 @@ line_new();
 void
 screen_init(screen_t * s, unsigned height_opt);
 
+static int
+compar(const void * a, const void * b);
+
 /* ******************************* */
 /* Linked list specific structures */
 /* ******************************* */
@@ -105,11 +106,21 @@ struct ll_s
 
 struct line_s
 {
-  unsigned        allocated;
-  unsigned        length;
-  unsigned        bytes;
-  unsigned char * string;
+  unsigned         allocated; /* allocated memory                  */
+  unsigned         length;    /* number of multiobytes in the line */
+  unsigned         bytes;     /* nb of bytes in the line           */
+  unsigned char *  string;    /* line content                      */
+  attrs_bytes_t ** attrs;     /* array of attributes affected to    *
+                                        each column of the line           */
 };
+
+struct attrs_bytes_s
+{
+  size_t          len;   /* number of bytes forming the attributes */
+  unsigned char * bytes; /* attributes                             */
+};
+
+attrs_bytes_t curr_attrs_bytes;
 
 struct screen_s
 {
@@ -131,6 +142,37 @@ int    my_optopt;     /* for compatibility, option character checked */
 
 static const char * prog = "hlvt";
 static char *       scan = NULL; /* Private scan pointer. */
+static unsigned     no_attr;
+
+/* ========================= */
+/* qsort comparison function */
+/* ========================= */
+static int
+compar(const void * a, const void * b)
+{
+  return *(unsigned char *)a - *(unsigned char *)b;
+}
+
+/* ===================================================================t */
+/* Print the column and the attributes associated with the character at */
+/* column n of the current line.                                        */
+/* ===================================================================t */
+static int
+attrs_print(attrs_bytes_t ** attrs, size_t n)
+{
+  size_t          i;
+  attrs_bytes_t * v = attrs[n];
+
+  if (v->len == 0 || (v->len == 1 && v->bytes[0] == 0))
+    return 0;
+
+  printf("%d:", n);
+  for (i = 0; i < v->len; i++)
+    printf("%02x", v->bytes[i]);
+  fputs(" ", stdout);
+
+  return 0;
+}
 
 /* ********************* */
 /* Linked List functions */
@@ -529,6 +571,9 @@ line_new()
   line->string    = xmalloc(line->allocated);
   *(line->string) = '\0';
 
+  if (!no_attr)
+    line->attrs = xmalloc(sizeof(attrs_bytes_t *) * 128);
+
   return line;
 }
 
@@ -639,6 +684,8 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
 
   switch (action)
   {
+    attrs_bytes_t * attrs;
+
     case VTPARSE_ACTION_PRINT:
       /* TODO: manage 0x7f (DEL) */
       /* """"""""""""""""""""""" */
@@ -655,6 +702,10 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
       /* """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""" */
       if (screen.column > cl->length)
       {
+        if (!no_attr)
+          cl->attrs = xrealloc(cl->attrs, 64 * sizeof(attrs_bytes_t *)
+                                            * (screen.column / 64 + 1));
+
         for (i = 0; i < screen.column - cl->length; i++)
         {
           if (cl->bytes + i == cl->allocated - 1)
@@ -663,10 +714,29 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
             cl->string = xrealloc(cl->string, cl->allocated);
           }
           *(cl->string + cl->bytes + i) = ' ';
+
+          if (!no_attr)
+          {
+            attrs                     = xmalloc(sizeof(attrs_bytes_t));
+            attrs->len                = 1;
+            attrs->bytes              = xmalloc(1);
+            *attrs->bytes             = '\0';
+            cl->attrs[cl->length + i] = attrs;
+          }
         }
 
         cl->length += i;
         cl->bytes += i;
+      }
+
+      if (!no_attr)
+      {
+        attrs        = xmalloc(sizeof(attrs_bytes_t));
+        attrs->len   = curr_attrs_bytes.len;
+        attrs->bytes = xmalloc(attrs->len);
+
+        for (i = 0; i < attrs->len; i++)
+          attrs->bytes[i] = curr_attrs_bytes.bytes[i];
       }
 
       /* if we are at the end of the current line, increase its size */
@@ -681,6 +751,9 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
 
         if (rem_bytes == 0) /* A complete UTF-8 sequence has been read */
         {
+          if (!no_attr && attrs->len > 0)
+            cl->attrs[screen.column] = attrs;
+
           cl->length++;
           screen.column++;
         }
@@ -699,6 +772,17 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
 
         if (rem_bytes == 0)
         {
+          if (!no_attr && attrs->len > 0)
+          {
+            attrs_bytes_t * old_attrs;
+
+            old_attrs = cl->attrs[screen.column];
+            free(old_attrs->bytes);
+            free(old_attrs);
+
+            cl->attrs[screen.column] = attrs;
+          }
+
           screen.column++;
           if (pos + ch_bytes - rem_bytes - 1 > cl->bytes)
             cl->bytes = pos + ch_bytes - rem_bytes;
@@ -950,6 +1034,28 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
           break;
         }
 
+        case 'm':
+          if (!no_attr)
+          {
+            if (parser->num_params == 0)
+            {
+              curr_attrs_bytes.len      = 1;
+              curr_attrs_bytes.bytes    = xrealloc(curr_attrs_bytes.bytes, 1);
+              *(curr_attrs_bytes.bytes) = '\0';
+            }
+            else
+            {
+              curr_attrs_bytes.len = parser->num_params;
+              curr_attrs_bytes.bytes =
+                xrealloc(curr_attrs_bytes.bytes, curr_attrs_bytes.len);
+
+              for (i = 0; i < parser->num_params; i++)
+                curr_attrs_bytes.bytes[i] = parser->params[i];
+              qsort(curr_attrs_bytes.bytes, parser->num_params, 1, compar);
+            }
+          }
+          break;
+
         default:
           break;
       }
@@ -1099,6 +1205,15 @@ display(screen_t * screen, unsigned frame_opt)
     else
       puts((char *)line->string);
 
+    if (!no_attr)
+    {
+      size_t i;
+
+      for (i = 0; i < line->length; i++)
+        attrs_print(line->attrs, i);
+      puts("");
+    }
+
     if (node == last)
       break;
 
@@ -1115,7 +1230,7 @@ display(screen_t * screen, unsigned frame_opt)
 void
 usage(char * prog)
 {
-  printf("usage: %s [-l screen_lines] [-f]\n", prog);
+  printf("usage: %s [-l screen_lines] [-f] [-n]\n", prog);
   exit(EXIT_FAILURE);
 }
 
@@ -1134,10 +1249,11 @@ main(int argc, char ** argv)
   unsigned      frame_opt;
   vtparse_t     parser;
 
-  height_opt = 24;
-  frame_opt  = 0;
+  height_opt = 24; /* Defaults to 24 lines             */
+  frame_opt  = 0;  /* Displays the window's frame      */
+  no_attr    = 0;  /* Enables DEC attributes reporting */
 
-  while ((opt = my_getopt(argc, argv, "l:f")) != -1)
+  while ((opt = my_getopt(argc, argv, "l:fn")) != -1)
   {
     switch (opt)
     {
@@ -1153,6 +1269,10 @@ main(int argc, char ** argv)
         frame_opt = 1;
         break;
 
+      case 'n':
+        no_attr = 1;
+        break;
+
       default:
         usage(argv[0]);
         break;
@@ -1165,16 +1285,30 @@ main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
+  /* Various initializations */
+  /* """"""""""""""""""""""" */
   vtparse_init(&parser, parser_callback);
-
   screen_init(&screen, height_opt);
 
+  if (!no_attr)
+  {
+    /* Initialization of the current attributes to 'no attribute' */
+    /* """""""""""""""""""""""""""""""""""""""""""""""""""""""""" */
+    curr_attrs_bytes.len      = 1;
+    curr_attrs_bytes.bytes    = xmalloc(1);
+    curr_attrs_bytes.bytes[0] = '\0';
+  }
+
+  /* Parsing */
+  /* """"""" */
   do
   {
     bytes = read(STDIN_FILENO, buf, 1024);
     vtparse(&parser, buf, bytes);
   } while (bytes > 0);
 
+  /* Final screen display with attributes */
+  /* """""""""""""""""""""""""""""""""""" */
   display(&screen, frame_opt);
 
   return 0;
