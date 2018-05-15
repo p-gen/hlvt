@@ -144,6 +144,24 @@ static const char * prog = "hlvt";
 static char *       scan = NULL; /* Private scan pointer. */
 static unsigned     no_attr;
 
+/* ====================================================== */
+/* Like strspn but based on length and not on a delimiter */
+/* ====================================================== */
+size_t
+memspn(const char * data, size_t len, const char * accept, size_t accept_len)
+{
+  size_t i, j;
+  for (i = 0; i < len; i++)
+  {
+    for (j = 0; j < accept_len; j++)
+      if (accept[j] == data[i])
+        goto cont_outer;
+    break;
+  cont_outer:;
+  }
+  return i;
+}
+
 /* ========================= */
 /* qsort comparison function */
 /* ========================= */
@@ -160,18 +178,76 @@ compar(const void * a, const void * b)
 static int
 attrs_print(attrs_bytes_t ** attrs, size_t n)
 {
-  size_t          i;
+  size_t          i, offset;
   attrs_bytes_t * v = attrs[n];
 
-  if (v->len == 0 || (v->len == 1 && v->bytes[0] == 0))
+  if ((offset = memspn(v->bytes, v->len, "\0", 1)) == v->len)
     return 0;
 
   printf("%d:", n);
-  for (i = 0; i < v->len; i++)
+  for (i = offset; i < v->len; i++)
     printf("%02x", v->bytes[i]);
   fputs(" ", stdout);
 
   return 0;
+}
+
+/* ======================================================= */
+/* Merge two sorted arrays, first_a with a integers and    */
+/* second_a with b integers, into a sorted array result_a. */
+/* Duplicated values are removed.                          */
+/* ======================================================= */
+int
+attrs_merge(unsigned char * first_a, int a, unsigned char * second_a, int b,
+            unsigned char * result_a)
+{
+  int           i, j, k;
+  unsigned char old;
+
+  i   = 0;
+  j   = 0;
+  k   = 0;
+  old = '\0';
+
+  while (i < a && j < b)
+  {
+    if (first_a[i] <= second_a[j])
+    {
+      /* copy first_a[i] to result_a[k] and move */
+      /* the pointer i and k forward             */
+      /* """"""""""""""""""""""""""""""""""""""" */
+      if (first_a[i] != old)
+        old = result_a[k++] = first_a[i];
+      i++;
+    }
+    else
+    {
+      /* copy second_a[j] to result_a[k] and move */
+      /* the pointer j and k forward              */
+      /* """""""""""""""""""""""""""""""""""""""" */
+      if (second_a[j] != old)
+        old = result_a[k++] = second_a[j];
+      j++;
+    }
+  }
+  /* move the remaining elements in first_a into result_a */
+  /* """""""""""""""""""""""""""""""""""""""""""""""""""" */
+  while (i < a)
+  {
+    if (first_a[i] != old)
+      old = result_a[k++] = first_a[i];
+    i++;
+  }
+  /* move the remaining elements in second_a into result_a */
+  /* """"""""""""""""""""""""""""""""""""""""""""""""""""" */
+  while (j < b)
+  {
+    if (second_a[j] != old)
+      old = result_a[k++] = second_a[j];
+    j++;
+  }
+
+  return k;
 }
 
 /* ********************* */
@@ -1037,21 +1113,44 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
         case 'm':
           if (!no_attr)
           {
-            if (parser->num_params == 0)
+            if (parser->num_params == 0
+                || (parser->num_params == 1 && parser->params[0] == '\0'))
             {
               curr_attrs_bytes.len      = 1;
-              curr_attrs_bytes.bytes    = xrealloc(curr_attrs_bytes.bytes, 1);
-              *(curr_attrs_bytes.bytes) = '\0';
+              curr_attrs_bytes.bytes[0] = '\0';
             }
             else
             {
-              curr_attrs_bytes.len = parser->num_params;
-              curr_attrs_bytes.bytes =
-                xrealloc(curr_attrs_bytes.bytes, curr_attrs_bytes.len);
+              /* The current attribute structure is empty */
+              /* """""""""""""""""""""""""""""""""""""""" */
+              if (curr_attrs_bytes.bytes[0] == '\0')
+              {
+                curr_attrs_bytes.len = parser->num_params;
+                curr_attrs_bytes.bytes =
+                  xrealloc(curr_attrs_bytes.bytes, curr_attrs_bytes.len);
 
-              for (i = 0; i < parser->num_params; i++)
-                curr_attrs_bytes.bytes[i] = parser->params[i];
-              qsort(curr_attrs_bytes.bytes, parser->num_params, 1, compar);
+                for (i = 0; i < parser->num_params; i++)
+                  curr_attrs_bytes.bytes[i] = parser->params[i];
+                qsort(curr_attrs_bytes.bytes, parser->num_params, 1, compar);
+              }
+              else
+              {
+                /* The current attribute structure already contains */
+                /* some attributes, we need to merge the new ones   */
+                /* """""""""""""""""""""""""""""""""""""""""""""""" */
+                unsigned char * bytes;
+                int             len;
+
+                bytes = xmalloc(curr_attrs_bytes.len + parser->num_params);
+                qsort(parser->params, parser->num_params, 1, compar);
+                len = attrs_merge(curr_attrs_bytes.bytes, curr_attrs_bytes.len,
+                                  parser->params, parser->num_params, bytes);
+                bytes = xrealloc(bytes, len);
+                free(curr_attrs_bytes.bytes);
+
+                curr_attrs_bytes.len   = len;
+                curr_attrs_bytes.bytes = bytes;
+              }
             }
           }
           break;
