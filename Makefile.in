@@ -80,9 +80,10 @@ bin_PROGRAMS = hlvt$(EXEEXT)
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) \
-	$(srcdir)/config.h.in $(top_srcdir)/build-aux/depcomp depcomp \
-	build-aux/depcomp install-sh build-aux/install-sh missing \
-	build-aux/missing $(top_srcdir)/build-aux/install-sh \
+	$(srcdir)/config.h.in $(srcdir)/hlvt.spec.in \
+	$(top_srcdir)/build-aux/depcomp depcomp build-aux/depcomp \
+	install-sh build-aux/install-sh missing build-aux/missing \
+	build-aux/ltmain.sh $(top_srcdir)/build-aux/install-sh \
 	$(top_srcdir)/build-aux/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -92,7 +93,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = hlvt.spec
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
@@ -262,12 +263,14 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-hlvt_SOURCES = hlvt.c vtparse.c vtparse.h vtparse_table.c vtparse_table.h
+hlvt_SOURCES = hlvt.c vtparse.c vtparse.h vtparse_table.c vtparse_table.h \
+	       hlvt.spec
+
 #dist_man_MANS = hlvt.1
-EXTRA_DIST = LICENSE.rst README.rst README.vtparse TODO.sequences \
-             build-aux version vtparse_check_tables.rb            \
-	     vtparse_gen_c_tables.rb vtparse_tables.rb            \
-	     .clang-format
+EXTRA_DIST = COPYRIGHT LICENSE.rst README.rst README.vtparse \
+	     TODO.sequences build-aux version                \
+	     vtparse_check_tables.rb vtparse_gen_c_tables.rb \
+	     vtparse_tables.rb .clang-format
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -323,6 +326,8 @@ $(srcdir)/config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
+hlvt.spec: $(top_builddir)/config.status $(srcdir)/hlvt.spec.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \

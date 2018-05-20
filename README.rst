@@ -26,6 +26,7 @@ Synopsis
 
 -l  describes the number of lines of the virtual screen, the number of
     columns is not limited.  By default, the virtual screen has 24 lines.
+
 -f  adds some formatting to the outputs and is not needed in most cases.
 
 -n  do not display the attribute lines.
@@ -57,7 +58,5 @@ Notice that the files VTParse_table.[ch] are generated from the ruby
 files, hence ruby is required at least once.
 
 Have fun.
-
-(c) Pierre Gentile (p.gen.progs@gmail.com)
 
 License: GPLv2

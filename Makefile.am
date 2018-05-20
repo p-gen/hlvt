@@ -1,10 +1,11 @@
 bin_PROGRAMS = hlvt
-hlvt_SOURCES = hlvt.c vtparse.c vtparse.h vtparse_table.c vtparse_table.h
+hlvt_SOURCES = hlvt.c vtparse.c vtparse.h vtparse_table.c vtparse_table.h \
+	       hlvt.spec
 #dist_man_MANS = hlvt.1
-EXTRA_DIST = LICENSE.rst README.rst README.vtparse TODO.sequences \
-             build-aux version vtparse_check_tables.rb            \
-	     vtparse_gen_c_tables.rb vtparse_tables.rb            \
-	     .clang-format
+EXTRA_DIST = COPYRIGHT LICENSE.rst README.rst README.vtparse \
+	     TODO.sequences build-aux version                \
+	     vtparse_check_tables.rb vtparse_gen_c_tables.rb \
+	     vtparse_tables.rb .clang-format
 
 hlvt.c: vtparse_table.c vtparse_table.h
 
