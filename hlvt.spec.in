@@ -1,5 +1,5 @@
 #
-# spec file for package smenu
+# spec file for package hlvt
 #
 # Copyright (c) 2015 SUSE LINUX GmbH, Nuernberg, Germany.
 #
@@ -19,7 +19,7 @@
 Name:           hlvt
 Version:        @VERSION@
 Release:        0
-Summary:        An embryonic headless DEC sequences interpreter
+Summary:        A small headless DEC VT sequences interpreter
 License:        GPL-2.0
 Group:          Productivity/Text/Utilities
 Url:            http://github.com/p-gen/hlvt.git
@@ -28,9 +28,9 @@ BuildRequires:  ruby
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
-This small tool is able to somewhat simulate a DEC VT terminal.
-The resulting rendering will go to stdout. Character's attributes,
-if any, will be output after each line of text.
+This tool is able to somewhat simulate a DEC VT terminal. The resulting
+rendering will go to stdout. Character attributes, if any, will be output
+after each line of text.
 
 Author: Pierre Gentile <p.gen.progs@gmail.com>
 
@@ -54,5 +54,6 @@ done
 %dir %{_defaultdocdir}/%{name}
 %doc %{_defaultdocdir}/%{name}/COPYRIGHT
 %doc %{_defaultdocdir}/%{name}/*.rst
+%{_mandir}/man1/*
 
 %changelog

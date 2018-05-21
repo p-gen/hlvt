@@ -1,3 +1,21 @@
+====
+hlvt
+====
+
+-----------------------------------------------------
+Minimalist and incomplete headless terminal emulation
+-----------------------------------------------------
+
+:Author: p.gen.progs@gmail.com
+:Copyright: Pierre Gentile (2018)
+:Version: 0.1
+:Manual section: 1
+:Manual group: text processing
+
+Synopsis
+========
+``hlvt [-l screen_lines] [-f] [-n]``
+
 Description
 ===========
 This program is a minimalist and incomplete headless terminal emulation.
@@ -20,17 +38,6 @@ fact the supported encodings and only UTF-8 and ASCII 7-bit.
 This program take its input from the standard input write to the standard
 output.
 
-Synopsis
-========
-``hlvt [-l screen_lines] [-f] [-n]``
-
--l  describes the number of lines of the virtual screen, the number of
-    columns is not limited.  By default, the virtual screen has 24 lines.
-
--f  adds some formatting to the outputs and is not needed in most cases.
-
--n  disables the output of the attribute lines.
-
 WARNING
     Only the latest (screen_lines) lines displayed on the virtual screen
     will be shown, the scrolled up ones will be lost.
@@ -49,14 +56,12 @@ NOTE
     The understood terminal sequences are those parsed by *VTParse*,
     see http://vt100.net/emu/dec_ansi_parser.html for more details.
 
-How to build
-============
-The content of the archive is complete and a single configure/make/make
-install should be enough.  A ``bnuild.sh`` script is also included.
+Options
+=======
 
-Notice that the files VTParse_table.[ch] are generated from the ruby
-files, hence ruby is required at least once.
+-l  describes the number of lines of the virtual screen, the number of
+    columns is not limited.  By default, the virtual screen has 24 lines.
 
-Have fun.
+-f  adds some formatting to the outputs and is not needed in most cases.
 
-License: GPLv2
+-n  disables the output of the attribute lines.
