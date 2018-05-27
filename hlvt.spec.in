@@ -38,8 +38,9 @@ Author: Pierre Gentile <p.gen.progs@gmail.com>
 %setup -q
 
 %build
+set -vx
 %configure
-make %{?_smp_mflags}
+make
 
 %install
 make DESTDIR=%{buildroot} install %{?_smp_mflags}

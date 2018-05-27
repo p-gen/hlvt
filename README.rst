@@ -52,7 +52,7 @@ NOTE
 How to build
 ============
 The content of the archive is complete and a single configure/make/make
-install should be enough.  A ``bnuild.sh`` script is also included.
+install should be enough.  A ``build.sh`` script is also included.
 
 Notice that the files VTParse_table.[ch] are generated from the ruby
 files, hence ruby is required at least once.

@@ -3719,6 +3719,25 @@ fi
 done
 
 
+if test "x$RUBY" = x; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: ruby was not found, use the pre-generated files" >&5
+$as_echo "$as_me: WARNING: ruby was not found, use the pre-generated files" >&2;}
+  if test -f vtparse_table.h -a \
+          -f vtparse_table.c; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: vtparse_table.h and .c are already there, nothing to do" >&5
+$as_echo "$as_me: vtparse_table.h and .c are already there, nothing to do" >&6;}
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: copy the pre-generated vtparse_table.*.pre files" >&5
+$as_echo "$as_me: copy the pre-generated vtparse_table.*.pre files" >&6;}
+    cp vtparse_table.h.pre vtparse_table.h
+    cp vtparse_table.c.pre vtparse_table.c
+  fi
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: remove the possibly existing vtparse_table.h and .c files" >&5
+$as_echo "$as_me: remove the possibly existing vtparse_table.h and .c files" >&6;}
+  rm -f vtparse_table.h vtparse_table.c
+fi
+
 # Checks for libraries.
 
 # Checks for header files.

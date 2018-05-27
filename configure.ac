@@ -16,6 +16,21 @@ AM_SILENT_RULES([yes])
 AC_PROG_CC
 AC_PATH_PROGS([RUBY], [ruby ruby20 ruby21 ruby22 ruby23 ruby24])
 
+if test "x$RUBY" = x; then
+  AC_MSG_WARN([ruby was not found, use the pre-generated files])
+  if test -f vtparse_table.h -a \
+          -f vtparse_table.c; then
+    AC_MSG_NOTICE([vtparse_table.h and .c are already there, nothing to do])
+  else
+    AC_MSG_NOTICE([copy the pre-generated vtparse_table.*.pre files])
+    cp vtparse_table.h.pre vtparse_table.h
+    cp vtparse_table.c.pre vtparse_table.c
+  fi
+else
+  AC_MSG_NOTICE([remove the possibly existing vtparse_table.h and .c files])
+  rm -f vtparse_table.h vtparse_table.c
+fi
+
 # Checks for libraries.
 
 # Checks for header files.
