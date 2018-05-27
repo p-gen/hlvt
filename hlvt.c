@@ -641,14 +641,14 @@ line_new()
 {
   line_t * line = xmalloc(sizeof(line_t));
 
-  line->allocated = 128;
+  line->allocated = 64;
   line->length    = 0;
   line->bytes     = 0;
   line->string    = xmalloc(line->allocated);
   *(line->string) = '\0';
 
   if (!no_attr)
-    line->attrs = xmalloc(sizeof(attrs_bytes_t *) * 128);
+    line->attrs = xmalloc(sizeof(attrs_bytes_t *) * 64);
 
   return line;
 }
@@ -776,7 +776,7 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
       /* We need to add spaces at the end of the line if the column to */
       /* write is after it.                                            */
       /* """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""" */
-      if (screen.column > cl->length)
+      if (screen.column >= cl->length)
       {
         if (!no_attr)
           cl->attrs = xrealloc(cl->attrs, 64 * sizeof(attrs_bytes_t *)
@@ -784,7 +784,7 @@ parser_callback(vtparse_t * parser, vtparse_action_t action, unsigned char ch)
 
         for (i = 0; i < screen.column - cl->length; i++)
         {
-          if (cl->bytes + i == cl->allocated - 1)
+          if (cl->bytes + i == cl->allocated - 2)
           {
             cl->allocated += 64;
             cl->string = xrealloc(cl->string, cl->allocated);
